@@ -20,8 +20,8 @@ android {
         applicationId = "com.example.betterweather"
         minSdk = 30
         targetSdk = 37
-        versionCode = 2
-        versionName = "1.0.1"
+        versionCode = 3
+        versionName = "1.0.2"
 
     }
 
@@ -39,9 +39,8 @@ android {
     buildTypes {
         release {
             signingConfigs.findByName("release")?.let { signingConfig = it }
-            // R8 shrinking broke Kotlin/WorkManager at runtime on the watch, so releases ship unshrunk.
             optimization {
-                enable = false
+                enable = true
             }
         }
     }

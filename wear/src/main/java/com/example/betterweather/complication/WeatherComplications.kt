@@ -43,6 +43,20 @@ fun conditionGlyph(c: Condition, isDay: Boolean): String = when (c) {
     Condition.WINDY -> "💨"
 }
 
+/** One short word for the "H / L / weather" line. */
+fun conditionWord(c: Condition, isDay: Boolean): String = when (c) {
+    Condition.CLEAR -> if (isDay) "Sunny" else "Clear"
+    Condition.PARTLY_CLOUDY -> "Partly"
+    Condition.CLOUDY -> "Cloudy"
+    Condition.FOG -> "Fog"
+    Condition.DRIZZLE -> "Drizzle"
+    Condition.RAIN -> "Rain"
+    Condition.THUNDERSTORM -> "Storms"
+    Condition.SNOW -> "Snow"
+    Condition.SLEET -> "Sleet"
+    Condition.WINDY -> "Windy"
+}
+
 /**
  * Base class: answers instantly from the on-disk cache and never touches the network. If the cache is
  * stale it schedules a background refresh, which then asks us to update again.
@@ -91,8 +105,10 @@ abstract class BaseWeatherComplication : SuspendingComplicationDataSourceService
         return when (type) {
             ComplicationType.LONG_TEXT -> when (mode) {
                 ComplicationMode.HIGH_LOW_WEATHER ->
-                    LongTextComplicationData.Builder(text("${s.tempC.fmtTemp(u)} ${s.description}"), text(desc))
-                        .setTitle(text(hl)).setMonochromaticImage(monoIcon).setSmallImage(colorIcon).setTapAction(tap()).build()
+                    // Single line: "H 75° / L 61° / Rain" (no title, so the face keeps it on one line).
+                    LongTextComplicationData.Builder(
+                        text("H ${s.highC.fmtTemp(u)} / L ${s.lowC.fmtTemp(u)} / ${conditionWord(s.condition, s.isDay)}"), text(desc))
+                        .setMonochromaticImage(monoIcon).setSmallImage(colorIcon).setTapAction(tap()).build()
 
                 ComplicationMode.HIGH_LOW ->
                     LongTextComplicationData.Builder(text(hl), text(desc))
