@@ -43,18 +43,18 @@ fun conditionGlyph(c: Condition, isDay: Boolean): String = when (c) {
     Condition.WINDY -> "💨"
 }
 
-/** One short word for the "H / L / weather" line. */
+/** One letter for the "H / L / weather" line: S sunny, M moonlit/clear night, P partly, C cloudy, F fog, D drizzle, R rain, T thunder, N snow, I sleet, W windy. */
 fun conditionWord(c: Condition, isDay: Boolean): String = when (c) {
-    Condition.CLEAR -> if (isDay) "Sunny" else "Clear"
-    Condition.PARTLY_CLOUDY -> "Partly"
-    Condition.CLOUDY -> "Cloudy"
-    Condition.FOG -> "Fog"
-    Condition.DRIZZLE -> "Drizzle"
-    Condition.RAIN -> "Rain"
-    Condition.THUNDERSTORM -> "Storms"
-    Condition.SNOW -> "Snow"
-    Condition.SLEET -> "Sleet"
-    Condition.WINDY -> "Windy"
+    Condition.CLEAR -> if (isDay) "S" else "M"
+    Condition.PARTLY_CLOUDY -> "P"
+    Condition.CLOUDY -> "C"
+    Condition.FOG -> "F"
+    Condition.DRIZZLE -> "D"
+    Condition.RAIN -> "R"
+    Condition.THUNDERSTORM -> "T"
+    Condition.SNOW -> "N"
+    Condition.SLEET -> "I"
+    Condition.WINDY -> "W"
 }
 
 /**
