@@ -3,6 +3,7 @@
 A fast, cute weather app for **Wear OS** with a tiny companion phone app. It is built around one idea: opening the
 weather should be **instant**, not a 10–20 second wait.
 **I dislike writing so yes this description is made with AI**
+
 > **Disclaimer:** This is an unofficial, non-commercial fan project. It is **not affiliated with, endorsed by,
 > sponsored by, or connected to Sanrio Co., Ltd.** in any way. Cinnamoroll, Mocha, Espresso and all related
 > characters and names are trademarks and copyrights of Sanrio Co., Ltd. The character artwork in this repository
@@ -64,6 +65,12 @@ icon, which follows the theme on both.
 
 Regenerating the launcher icons: the artwork is drawn in `wear/.../ui/art/LogoArt.kt` and exported by a debug-only
 tool (`IconExportActivity`) to `core/src/main/res/drawable-nodpi/`.
+
+## Install
+Grab the APKs from the [Releases page](https://github.com/Potato-Naruto/BetterWeather/releases): install
+`BetterWeather-wear-*.apk` on the watch (e.g. `adb connect <watch-ip>:<port>` then `adb install`) and
+`BetterWeather-phone-*.apk` on the phone. They are signed with a personal key, so Android may warn about an unknown
+developer; updates only work between builds signed with the same key.
 
 ## Build
 Requires Android Studio (JDK 17+ bundled) and the Android SDK.

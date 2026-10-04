@@ -10,3 +10,12 @@
 #-keepclassmembers class fqcn.of.javascript.interface.for.webview {
 #   public *;
 #}
+
+# WorkManager creates its Room database reflectively.
+-keep class * extends androidx.room.RoomDatabase { <init>(); }
+-keep class androidx.work.impl.WorkDatabase_Impl { *; }
+-keep class androidx.work.impl.** { *; }
+# Wearable data layer services and our manifest components
+-keep class com.example.betterweather.core.** { *; }
+-keep class * extends androidx.wear.watchface.complications.datasource.ComplicationDataSourceService { *; }
+-keep class * extends androidx.wear.tiles.TileService { *; }

@@ -93,10 +93,13 @@ class WeatherRepository private constructor(private val ctx: Context) {
     @SuppressLint("MissingPermission")
     private suspend fun acquireCoords(): Coords? {
         val saved = savedCoords()
+        android.util.Log.i("BW", "acquire saved=$saved perm=${hasLocationPermission()}")
         if (hasLocationPermission()) {
             val client = LocationServices.getFusedLocationProviderClient(ctx)
             // lastLocation answers in tens of milliseconds; only wait briefly for it.
-            val last: Location? = runCatching { withTimeoutOrNull(1_500) { client.lastLocation.await() } }.getOrNull()
+            val last: Location? = runCatching { withTimeoutOrNull(1_500) { client.lastLocation.await() } }
+                .onFailure { android.util.Log.w("BW", "lastLocation failed", it) }.getOrNull()
+            android.util.Log.i("BW", "last=$last")
             if (last != null) {
                 val keepName = saved != null && distanceKm(saved.lat, saved.lon, last.latitude, last.longitude) < 5.0
                 return Coords(last.latitude, last.longitude, if (keepName) saved!!.name else "").also { saveCoords(it) }
@@ -107,17 +110,19 @@ class WeatherRepository private constructor(private val ctx: Context) {
                     client.getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, CancellationTokenSource().token).await()
                 }
             }.getOrNull()
+            android.util.Log.i("BW", "current=$fresh")
             if (fresh != null) return Coords(fresh.latitude, fresh.longitude).also { saveCoords(it) }
         }
         if (saved != null) return saved
+        android.util.Log.i("BW", "trying IP location")
         // Last resort when location permission is denied: coarse IP-based location.
         return runCatching {
             withTimeoutOrNull(4_000) {
-                val o = httpJson("https://ipwho.is/")
+                val o = httpJson("https://ipwho.is/", totalTimeoutMs = 4_000)
                 if (!o.optBoolean("success", true)) null
                 else Coords(o.getDouble("latitude"), o.getDouble("longitude"), o.optString("city"))
             }
-        }.getOrNull()?.also { saveCoords(it) }
+        }.onFailure { android.util.Log.w("BW", "IP location failed", it) }.getOrNull()?.also { saveCoords(it) }
     }
 
     private fun distanceKm(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
@@ -130,7 +135,7 @@ class WeatherRepository private constructor(private val ctx: Context) {
         withTimeoutOrNull(3_000) {
             runCatching {
                 val o = httpJson(
-                    "https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${c.lat}&longitude=${c.lon}&localityLanguage=en"
+                    "https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${c.lat}&longitude=${c.lon}&localityLanguage=en", totalTimeoutMs = 3_000
                 )
                 o.optString("city").ifBlank { o.optString("locality") }.ifBlank { o.optString("principalSubdivision") }
             }.getOrNull()
@@ -143,12 +148,14 @@ class WeatherRepository private constructor(private val ctx: Context) {
      * calls are coalesced. Returns true if a fresh snapshot was stored.
      */
     suspend fun refresh(force: Boolean = false): Boolean {
+        android.util.Log.i("BW", "refresh(force=$force)")
         if (!force && isFresh()) return true
         if (!mutex.tryLock()) return false // somebody else is already refreshing
         _refreshing.value = true
         try {
             val s = settings.current
             val coords = acquireCoords()
+            android.util.Log.i("BW", "coords=$coords")
             if (coords == null) {
                 _message.value = if (_snapshot.value == null) "Need location" else null
                 return false

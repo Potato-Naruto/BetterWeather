@@ -6,10 +6,12 @@ import com.example.betterweather.data.Condition
 import com.example.betterweather.data.DayPoint
 import com.example.betterweather.data.HourPoint
 import com.example.betterweather.data.WeatherSnapshot
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
@@ -40,9 +42,13 @@ fun minRefreshMinutes(id: ProviderId): Long = when (id) {
     else -> 20
 }
 
-/** Short timeouts: a slow provider must fail fast so we can fall back instead of hanging for 20 seconds. */
-internal suspend fun httpGet(url: String, headers: Map<String, String> = emptyMap()): String =
-    withContext(Dispatchers.IO) {
+/**
+ * Short timeouts: a slow provider must fail fast so we can fall back instead of hanging for 20 seconds.
+ * The socket timeouts don't cover DNS, and blocking I/O can't be cancelled, so the request runs detached
+ * and we stop waiting after [totalTimeoutMs] regardless.
+ */
+internal suspend fun httpGet(url: String, headers: Map<String, String> = emptyMap(), totalTimeoutMs: Long = 10_000): String {
+    val job = CoroutineScope(Dispatchers.IO).async {
         val conn = (URL(url).openConnection() as HttpURLConnection).apply {
             connectTimeout = 5_000
             readTimeout = 7_000
@@ -61,8 +67,16 @@ internal suspend fun httpGet(url: String, headers: Map<String, String> = emptyMa
             conn.disconnect()
         }
     }
+    try {
+        return withTimeout(totalTimeoutMs) { job.await() }
+    } catch (e: TimeoutCancellationException) {
+        job.cancel()
+        throw ProviderException("Timed out")
+    }
+}
 
-internal suspend fun httpJson(url: String, headers: Map<String, String> = emptyMap()) = JSONObject(httpGet(url, headers))
+internal suspend fun httpJson(url: String, headers: Map<String, String> = emptyMap(), totalTimeoutMs: Long = 10_000) =
+    JSONObject(httpGet(url, headers, totalTimeoutMs))
 
 /** Strong wind overrides a calm-looking sky so "Windy" actually shows up. */
 internal fun withWind(c: Condition, windKmh: Float) =
