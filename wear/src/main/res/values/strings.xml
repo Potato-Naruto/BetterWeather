@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Better Weather</string>
+    <string name="tile_label">Weather</string>
+    <string name="complication_label">Weather (follows setting)</string>
+    <string name="complication_high_low_weather">High / Low / Weather</string>
+    <string name="complication_high_low">High / Low</string>
+    <string name="complication_forecast">Next 6h (every 2h)</string>
+</resources>
