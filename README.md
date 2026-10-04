@@ -2,7 +2,7 @@
 
 A fast, cute weather app for **Wear OS** with a tiny companion phone app. It is built around one idea: opening the
 weather should be **instant**, not a 10–20 second wait.
-
+**I dislike writing so yes this description is made with AI**
 > **Disclaimer:** This is an unofficial, non-commercial fan project. It is **not affiliated with, endorsed by,
 > sponsored by, or connected to Sanrio Co., Ltd.** in any way. Cinnamoroll, Mocha, Espresso and all related
 > characters and names are trademarks and copyrights of Sanrio Co., Ltd. The character artwork in this repository
