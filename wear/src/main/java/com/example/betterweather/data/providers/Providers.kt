@@ -125,7 +125,7 @@ object OpenMeteoProvider : WeatherProvider {
             "&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,is_day,wind_speed_10m" +
             "&hourly=temperature_2m,weather_code,is_day,precipitation_probability" +
             "&daily=temperature_2m_max,temperature_2m_min,weather_code" +
-            "&forecast_days=4&forecast_hours=24&timezone=auto&timeformat=unixtime"
+            "&forecast_days=8&forecast_hours=26&timezone=auto&timeformat=unixtime"
         val o = httpJson(url)
         val cur = o.getJSONObject("current")
         val code = cur.getInt("weather_code")
@@ -199,7 +199,7 @@ class NwsProvider(context: Context) : WeatherProvider {
         val dp = dailyReq.await().getJSONObject("properties").getJSONArray("periods")
 
         fun windKmh(s: String) = Regex("\\d+").findAll(s).map { it.value.toFloat() }.maxOrNull()?.times(1.609f) ?: 0f
-        val hourly = List(minOf(hp.length(), 24)) { i ->
+        val hourly = List(minOf(hp.length(), 26)) { i ->
             val p = hp.getJSONObject(i)
             val w = windKmh(p.optString("windSpeed"))
             HourPoint(
@@ -213,7 +213,7 @@ class NwsProvider(context: Context) : WeatherProvider {
         // The daily feed alternates day/night periods; pair them up for high/low.
         val days = ArrayList<DayPoint>()
         var i = 0
-        while (i < dp.length() && days.size < 4) {
+        while (i < dp.length() && days.size < 8) {
             val p = dp.getJSONObject(i)
             val t = toC(p.getDouble("temperature"), p.optString("temperatureUnit", "F"))
             val next = if (i + 1 < dp.length()) dp.getJSONObject(i + 1) else null
@@ -263,7 +263,7 @@ object OpenWeatherProvider : WeatherProvider {
         val base = "https://api.openweathermap.org/data/2.5"
         val q = "lat=$lat&lon=$lon&units=metric&appid=$apiKey"
         val curReq = async { httpJson("$base/weather?$q") }
-        val fcReq = async { httpJson("$base/forecast?$q&cnt=24") }
+        val fcReq = async { httpJson("$base/forecast?$q&cnt=40") }
         val cur = curReq.await()
         val fc = fcReq.await().getJSONArray("list")
         val main = cur.getJSONObject("main")
@@ -397,7 +397,7 @@ object WeatherCompanyProvider : WeatherProvider {
         val wind = cur.optDouble("windSpeed", 0.0).toFloat()
         val temp = cur.getDouble("temperature").toFloat()
         val times = hr.getJSONArray("validTimeLocal")
-        val hourly = List(minOf(times.length(), 24)) { i ->
+        val hourly = List(minOf(times.length(), 26)) { i ->
             HourPoint(isoMs(times.getString(i)), hr.getJSONArray("temperature").getDouble(i).toFloat(),
                 fromIcon(hr.getJSONArray("iconCode").getInt(i), 0f),
                 hr.getJSONArray("dayOrNight").getString(i) == "D", hr.optJSONArray("precipChance")?.optInt(i, 0) ?: 0)

@@ -75,6 +75,16 @@ data class WeatherSnapshot(
         }
     }
 
+    /**
+     * Now plus every forecast entry in the following 24 hours, for the scrollable strip.
+     * The first sample is real current conditions so it always agrees with the headline.
+     */
+    fun next24Hours(nowMs: Long = System.currentTimeMillis()): List<HourPoint> {
+        val hourStart = nowMs - nowMs % 3_600_000L
+        val first = HourPoint(hourStart, tempC, condition, isDay, hourly.firstOrNull()?.precipPct ?: 0)
+        return listOf(first) + hourly.filter { it.timeMs > hourStart && it.timeMs <= hourStart + 24 * 3_600_000L }
+    }
+
     fun toJson(): String = JSONObject().apply {
         put("provider", provider); put("loc", locationName); put("lat", lat); put("lon", lon)
         put("at", fetchedAtMs); put("t", tempC.toDouble()); put("f", feelsC.toDouble())
@@ -129,10 +139,10 @@ data class WeatherSnapshot(
                 provider = "Sample", locationName = "Your location", lat = 0.0, lon = 0.0, fetchedAtMs = now,
                 tempC = 22f, feelsC = 21f, condition = condition, description = condition.label, isDay = isDay,
                 humidity = 55, windKmh = 12f, highC = 25f, lowC = 15f,
-                hourly = List(24) { i ->
+                hourly = List(25) { i ->
                     HourPoint(hourStart + i * 3_600_000L, 22f - i * 0.4f, conds[(i / 2) % conds.size], isDay, (i * 7) % 90)
                 },
-                daily = List(3) { DayPoint(hourStart + it * 86_400_000L, 25f - it, 15f - it, conds[it]) },
+                daily = List(7) { DayPoint(hourStart + it * 86_400_000L, 25f - it, 15f - it, conds[it % conds.size]) },
             )
         }
     }

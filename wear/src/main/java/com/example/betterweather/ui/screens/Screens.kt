@@ -7,7 +7,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -41,6 +44,7 @@ import com.example.betterweather.core.ProviderId
 import com.example.betterweather.core.Settings
 import com.example.betterweather.core.ThemeId
 import com.example.betterweather.core.Units
+import com.example.betterweather.data.UpdateStatus
 import com.example.betterweather.data.WeatherSnapshot
 import com.example.betterweather.data.fmtTemp
 import com.example.betterweather.ui.art.Eyes
@@ -65,6 +69,8 @@ data class UiModel(
     val dark: Boolean,
     val ambient: Boolean,
     val batteryUnrestricted: Boolean = false,
+    val update: UpdateStatus = UpdateStatus.Idle,
+    val version: String = "",
 )
 
 private val readable = TextStyle(shadow = Shadow(Color.Black.copy(alpha = 0.28f), Offset(0f, 1.5f), 4f))
@@ -130,10 +136,12 @@ fun HomeScreen(ui: UiModel, onSettings: () -> Unit, onRefresh: () -> Unit) {
                 if (!loading) {
                     item { Spacer(Modifier.height(6.dp)) }
                     item {
-                        // Next 8 hours in 2 hour steps with matching icons.
-                        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(fg.copy(alpha = 0.12f)).padding(vertical = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceEvenly) {
-                            snap.twoHourSteps().forEachIndexed { i, h ->
+                        // Next 24 hours, horizontally scrollable.
+                        val hours = snap.next24Hours()
+                        LazyRow(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(fg.copy(alpha = 0.12f)),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                            itemsIndexed(hours) { i, h ->
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     Text(if (i == 0) "Now" else hourLabel(ctx, h.timeMs), color = fg, fontSize = 10.sp)
                                     WeatherIcon(h.condition, h.isDay, iconStyle, theme, Modifier.size(26.dp).padding(vertical = 2.dp),
@@ -148,7 +156,7 @@ fun HomeScreen(ui: UiModel, onSettings: () -> Unit, onRefresh: () -> Unit) {
                         Text("Feels ${snap.feelsC.fmtTemp(u)}  ·  ${snap.humidity}%  ·  $wind", color = fg, fontSize = 11.sp,
                             textAlign = TextAlign.Center, style = readable, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
                     }
-                    snap.daily.drop(1).take(3).forEach { d ->
+                    snap.daily.drop(1).take(6).forEach { d ->
                         item {
                             Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Text(dayLabel(d.dateMs), color = fg, fontSize = 13.sp, modifier = Modifier.width(44.dp))
@@ -190,7 +198,7 @@ private fun Pill(text: String, fg: Color, onClick: () -> Unit, modifier: Modifie
 // ---- settings --------------------------------------------------------------------------------------
 
 @Composable
-fun SettingsScreen(ui: UiModel, onChange: ((Settings) -> Settings) -> Unit, onRefresh: () -> Unit, onBattery: () -> Unit, onBack: () -> Unit) {
+fun SettingsScreen(ui: UiModel, onChange: ((Settings) -> Settings) -> Unit, onRefresh: () -> Unit, onBattery: () -> Unit, onUpdate: () -> Unit, onBack: () -> Unit) {
     val s = ui.settings
     val theme = themeSpec(s.theme)
     val bg = if (ui.dark) theme.nightTop.copy(alpha = 1f).let { androidx.compose.ui.graphics.lerp(it, Color.Black, 0.55f) }
@@ -230,6 +238,20 @@ fun SettingsScreen(ui: UiModel, onChange: ((Settings) -> Settings) -> Unit, onRe
                 item { Section("Complication", header) }
                 ComplicationMode.entries.forEach { m ->
                     item { Pill(m.label, fg, { onChange { it.copy(complicationMode = m) } }, selected = s.complicationMode == m, accent = theme.accent) }
+                }
+                item { Section("Updates", header) }
+                item {
+                    val st = ui.update
+                    val label = when (st) {
+                        UpdateStatus.Idle -> "Check for updates\n(v${ui.version})"
+                        UpdateStatus.Checking -> "Checking…"
+                        is UpdateStatus.UpToDate -> "Up to date (v${st.version})\nTap to check again"
+                        is UpdateStatus.Available -> "Update to v${st.version}\nTap to download & install"
+                        is UpdateStatus.Downloading -> "Downloading v${st.version}…"
+                        UpdateStatus.NeedsPermission -> "Allow installs for this app,\nthen tap again"
+                        is UpdateStatus.Failed -> "${st.message}\nTap to retry"
+                    }
+                    Pill(label, fg, onUpdate, selected = st is UpdateStatus.Available, accent = theme.accent)
                 }
                 item { Section("Data", header) }
                 item { Pill(if (ui.refreshing) "Refreshing…" else "Refresh now", fg, onRefresh) }

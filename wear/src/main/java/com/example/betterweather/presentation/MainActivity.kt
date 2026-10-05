@@ -25,6 +25,8 @@ import androidx.wear.compose.navigation.SwipeDismissableNavHost
 import androidx.wear.compose.navigation.composable
 import androidx.wear.compose.navigation.rememberSwipeDismissableNavController
 import com.example.betterweather.core.SettingsStore
+import com.example.betterweather.data.UpdateStatus
+import com.example.betterweather.data.Updater
 import com.example.betterweather.data.WeatherRepository
 import com.example.betterweather.ui.screens.HomeScreen
 import com.example.betterweather.ui.screens.SettingsScreen
@@ -110,6 +112,13 @@ class MainActivity : ComponentActivity() {
                             SettingsScreen(rememberUi(), onChange = { f -> SettingsStore.get(this@MainActivity).update(f) },
                                 onRefresh = { lifecycleScope.launch { repo.refresh(force = true) } },
                                 onBattery = { requestBatteryUnrestricted() },
+                                onUpdate = {
+                                    lifecycleScope.launch {
+                                        val st = Updater.status.value
+                                        if (st is UpdateStatus.Available) Updater.downloadAndInstall(this@MainActivity, st)
+                                        else Updater.check(this@MainActivity)
+                                    }
+                                },
                                 onBack = { nav.popBackStack() })
                         }
                     }
@@ -125,7 +134,9 @@ class MainActivity : ComponentActivity() {
         val snapshot by repo.snapshot.collectAsState()
         val refreshing by repo.refreshing.collectAsState()
         val message by repo.message.collectAsState()
+        val update by Updater.status.collectAsState()
         val dark = resolveDark(settings.appearance, isSystemInDarkTheme())
-        return UiModel(settings, snapshot, refreshing, message, dark, ambient, batteryUnrestricted)
+        return UiModel(settings, snapshot, refreshing, message, dark, ambient, batteryUnrestricted,
+            update, Updater.installedVersion(this))
     }
 }
